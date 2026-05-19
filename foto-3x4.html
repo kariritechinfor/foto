@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Fotos 3×4</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #f5f0e8;
+    --cream: #ede8dc;
+    --accent: #c8402a;
+    --accent2: #2a5fc8;
+    --muted: #8a8070;
+    --border: #ccc5b5;
+    --white: #ffffff;
+    --shadow: 0 2px 16px rgba(0,0,0,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 20px 40px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.9rem;
+    letter-spacing: -0.02em;
+  }
+  header span {
+    font-size: 0.8rem;
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── Layout ── */
+  .workspace {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--cream);
+    border-right: 1px solid var(--border);
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  .section-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* Upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 28px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(255,255,255,0.4);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(200,64,42,0.04);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .upload-zone p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .upload-zone strong { color: var(--accent); }
+
+  /* Controls */
+  .control-group { display: flex; flex-direction: column; gap: 6px; }
+  .control-group label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .control-group input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  .control-group input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--ink);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  .range-row { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn {
+    flex: 1;
+    padding: 9px 14px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--ink); background: rgba(0,0,0,0.04); }
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    flex: unset;
+    width: 100%;
+    padding: 11px;
+    font-size: 0.88rem;
+  }
+  .btn-accent:hover { background: #a83222; }
+  .btn-accent:disabled { background: var(--border); border-color: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  /* Config grid */
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .config-item {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .config-item:hover { border-color: var(--ink); }
+  .config-item.active { border-color: var(--accent); background: rgba(200,64,42,0.05); }
+  .config-item .qty { font-size: 1.3rem; font-weight: 600; font-family: 'DM Serif Display', serif; }
+  .config-item .desc { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+  /* Background color picker */
+  .bg-options { display: flex; gap: 8px; flex-wrap: wrap; }
+  .bg-swatch {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .bg-swatch.active { border-color: var(--ink); transform: scale(1.1); }
+  .bg-swatch[data-color="white"] { background: #ffffff; box-shadow: inset 0 0 0 1px #ccc; }
+  .bg-swatch[data-color="#f2f2f2"] { background: #f2f2f2; box-shadow: inset 0 0 0 1px #ccc; }
+  .bg-swatch[data-color="#d0e4f7"] { background: #d0e4f7; }
+  .bg-swatch[data-color="#c8e6c9"] { background: #c8e6c9; }
+  .bg-swatch[data-color="#fff9c4"] { background: #fff9c4; }
+  .bg-swatch[data-color="#1a1a1a"] { background: #1a1a1a; }
+  .bg-custom-input { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--border); cursor: pointer; overflow: hidden; padding: 0; }
+
+  /* ── Canvas area ── */
+  .canvas-area {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    overflow-y: auto;
+    background: #e8e3d8;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(0,0,0,0.03) 24px, rgba(0,0,0,0.03) 25px),
+                      repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(0,0,0,0.03) 24px, rgba(0,0,0,0.03) 25px);
+  }
+
+  .canvas-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* Preview single */
+  #single-preview-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  #preview-canvas {
+    background: white;
+    box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,0.07);
+    display: block;
+    /* 3cm × 4cm at 96dpi ≈ 113×151px — we show at 3× scale */
+  }
+
+  /* Print sheet */
+  .sheet-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  #sheet-canvas {
+    background: white;
+    box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,0.07);
+    display: block;
+  }
+
+  /* Divider */
+  .divider { width: 100%; height: 1px; background: var(--border); }
+
+  .tip {
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.5;
+    background: rgba(255,255,255,0.5);
+    border-left: 3px solid var(--accent);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+  }
+
+  /* Info badge */
+  .badge {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { visibility: visible; }
+    #print-area {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+    }
+    #sheet-canvas { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Foto 3×4</h1>
+  <span>Gerador para impressão</span>
+</header>
+
+<div class="workspace">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+
+    <!-- Upload -->
+    <div>
+      <div class="section-label">1. Foto</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*">
+        <span class="upload-icon">📷</span>
+        <p><strong>Clique ou arraste</strong> sua foto aqui<br>JPG, PNG, WEBP</p>
+      </div>
+    </div>
+
+    <!-- Ajustes -->
+    <div id="adjustments" style="display:none">
+      <div class="section-label">2. Ajustes</div>
+
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="control-group">
+          <label>Zoom: <strong id="zoom-val">100</strong>%</label>
+          <input type="range" id="zoom" min="50" max="300" value="100">
+          <div class="range-row"><span>50%</span><span>300%</span></div>
+        </div>
+        <div class="control-group">
+          <label>Horizontal: <strong id="ox-val">0</strong>px</label>
+          <input type="range" id="ox" min="-200" max="200" value="0">
+        </div>
+        <div class="control-group">
+          <label>Vertical: <strong id="oy-val">0</strong>px</label>
+          <input type="range" id="oy" min="-200" max="200" value="0">
+        </div>
+        <div class="control-group">
+          <label>Brilho: <strong id="bright-val">100</strong>%</label>
+          <input type="range" id="bright" min="50" max="180" value="100">
+        </div>
+        <div class="control-group">
+          <label>Contraste: <strong id="contrast-val">100</strong>%</label>
+          <input type="range" id="contrast" min="50" max="180" value="100">
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="section-label" style="margin-bottom:10px;">Fundo</div>
+        <div class="bg-options">
+          <div class="bg-swatch active" data-color="white" title="Branco"></div>
+          <div class="bg-swatch" data-color="#f2f2f2" title="Cinza claro"></div>
+          <div class="bg-swatch" data-color="#d0e4f7" title="Azul claro"></div>
+          <div class="bg-swatch" data-color="#c8e6c9" title="Verde claro"></div>
+          <div class="bg-swatch" data-color="#fff9c4" title="Amarelo claro"></div>
+          <div class="bg-swatch" data-color="#1a1a1a" title="Preto"></div>
+          <input type="color" class="bg-custom-input" id="custom-bg" title="Cor personalizada" value="#ffffff">
+        </div>
+      </div>
+
+      <div style="margin-top:14px;" class="btn-row">
+        <button class="btn btn-secondary" id="reset-btn">↺ Resetar</button>
+        <button class="btn btn-secondary" id="flip-btn">⇄ Espelhar</button>
+      </div>
+    </div>
+
+    <!-- Configuração da folha -->
+    <div>
+      <div class="section-label">3. Folha de impressão</div>
+      <div class="config-grid">
+        <div class="config-item active" data-qty="8">
+          <div class="qty">8</div>
+          <div class="desc">fotos / A4</div>
+        </div>
+        <div class="config-item" data-qty="4">
+          <div class="qty">4</div>
+          <div class="desc">fotos / A4</div>
+        </div>
+        <div class="config-item" data-qty="6">
+          <div class="qty">6</div>
+          <div class="desc">fotos / A4</div>
+        </div>
+        <div class="config-item" data-qty="12">
+          <div class="qty">12</div>
+          <div class="desc">fotos / A4</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Actions -->
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-accent" id="print-btn" disabled>🖨️ Imprimir folha</button>
+      <button class="btn btn-secondary" id="download-btn" style="width:100%; padding:9px;" disabled>⬇ Baixar PNG</button>
+    </div>
+
+    <div class="tip">
+      💡 Tamanho padrão 3×4: <strong>3cm × 4cm</strong>. Para documentos brasileiros, use fundo branco ou cinza claro.
+    </div>
+
+  </aside>
+
+  <!-- ── CANVAS AREA ── -->
+  <main class="canvas-area" id="canvas-area">
+
+    <div id="single-preview-wrap">
+      <div class="canvas-label">Pré-visualização — 1 foto (3×4)</div>
+      <canvas id="preview-canvas" width="339" height="453"></canvas>
+    </div>
+
+    <div class="sheet-wrap" id="sheet-wrap" style="display:none">
+      <div class="canvas-label" id="sheet-label">Folha A4 — 8 fotos</div>
+      <canvas id="sheet-canvas"></canvas>
+    </div>
+
+  </main>
+</div>
+
+<!-- Hidden print area -->
+<div id="print-area" style="display:none">
+  <canvas id="print-canvas"></canvas>
+</div>
+
+<script>
+// ── Constants ──
+// 3cm × 4cm at 96dpi: 1cm = 37.795px
+// Preview scale = 3× → display size ≈ 113×151 → 339×453
+const PX_PER_CM_96 = 37.795;
+const PHOTO_W_CM = 3, PHOTO_H_CM = 4;
+const PHOTO_W_PX = PHOTO_W_CM * PX_PER_CM_96;  // ~113.4
+const PHOTO_H_PX = PHOTO_H_CM * PX_PER_CM_96;  // ~151.2
+const DISPLAY_SCALE = 3;                          // for preview
+const PREVIEW_W = Math.round(PHOTO_W_PX * DISPLAY_SCALE); // 339
+const PREVIEW_H = Math.round(PHOTO_H_PX * DISPLAY_SCALE); // 453
+
+// A4 at 96dpi: 21cm × 29.7cm
+const A4_W_PX = 21 * PX_PER_CM_96;
+const A4_H_PX = 29.7 * PX_PER_CM_96;
+const A4_W_DISPLAY = Math.round(A4_W_PX * 1.2);
+const A4_H_DISPLAY = Math.round(A4_H_PX * 1.2);
+
+// State
+let img = null;
+let zoom = 100, offsetX = 0, offsetY = 0;
+let brightness = 100, contrast = 100;
+let bgColor = 'white';
+let flipped = false;
+let qty = 8;
+
+// Elements
+const fileInput   = document.getElementById('file-input');
+const uploadZone  = document.getElementById('upload-zone');
+const previewCvs  = document.getElementById('preview-canvas');
+const sheetCvs    = document.getElementById('sheet-canvas');
+const printBtn    = document.getElementById('print-btn');
+const downloadBtn = document.getElementById('download-btn');
+const adjustments = document.getElementById('adjustments');
+const sheetWrap   = document.getElementById('sheet-wrap');
+const sheetLabel  = document.getElementById('sheet-label');
+
+previewCvs.width  = PREVIEW_W;
+previewCvs.height = PREVIEW_H;
+
+// ── File input ──
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const i = new Image();
+    i.onload = () => {
+      img = i;
+      zoom = 100; offsetX = 0; offsetY = 0;
+      brightness = 100; contrast = 100; flipped = false;
+      syncUI();
+      adjustments.style.display = '';
+      sheetWrap.style.display = '';
+      printBtn.disabled = false;
+      downloadBtn.disabled = false;
+      renderAll();
+    };
+    i.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function syncUI() {
+  document.getElementById('zoom').value = zoom;
+  document.getElementById('zoom-val').textContent = zoom;
+  document.getElementById('ox').value = offsetX;
+  document.getElementById('ox-val').textContent = offsetX;
+  document.getElementById('oy').value = offsetY;
+  document.getElementById('oy-val').textContent = offsetY;
+  document.getElementById('bright').value = brightness;
+  document.getElementById('bright-val').textContent = brightness;
+  document.getElementById('contrast').value = contrast;
+  document.getElementById('contrast-val').textContent = contrast;
+}
+
+// ── Sliders ──
+function bindSlider(id, valId, prop, cb) {
+  const el = document.getElementById(id);
+  const vl = document.getElementById(valId);
+  el.addEventListener('input', () => {
+    window[prop] = parseInt(el.value);
+    vl.textContent = el.value;
+    renderAll();
+  });
+}
+bindSlider('zoom','zoom-val','zoom');
+bindSlider('ox','ox-val','offsetX');
+bindSlider('oy','oy-val','offsetY');
+bindSlider('bright','bright-val','brightness');
+bindSlider('contrast','contrast-val','contrast');
+
+// ── Background ──
+document.querySelectorAll('.bg-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    bgColor = sw.dataset.color;
+    renderAll();
+  });
+});
+document.getElementById('custom-bg').addEventListener('input', e => {
+  document.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
+  bgColor = e.target.value;
+  renderAll();
+});
+
+// ── Flip ──
+document.getElementById('flip-btn').addEventListener('click', () => {
+  flipped = !flipped;
+  renderAll();
+});
+
+// ── Reset ──
+document.getElementById('reset-btn').addEventListener('click', () => {
+  zoom = 100; offsetX = 0; offsetY = 0;
+  brightness = 100; contrast = 100; flipped = false;
+  syncUI();
+  renderAll();
+});
+
+// ── Qty config ──
+document.querySelectorAll('.config-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.config-item').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+    qty = parseInt(el.dataset.qty);
+    sheetLabel.textContent = `Folha A4 — ${qty} fotos`;
+    if (img) renderSheet();
+  });
+});
+
+// ── Render preview ──
+function drawPhoto(ctx, w, h) {
+  ctx.fillStyle = bgColor === 'white' ? '#ffffff' : bgColor;
+  ctx.fillRect(0, 0, w, h);
+
+  if (!img) return;
+
+  ctx.save();
+  ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+
+  const scale = (zoom / 100);
+  const iw = img.naturalWidth * scale;
+  const ih = img.naturalHeight * scale;
+
+  // Fit by height first, then center
+  const fitScale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const fw = img.naturalWidth * fitScale * (zoom / 100);
+  const fh = img.naturalHeight * fitScale * (zoom / 100);
+  const dx = (w - fw) / 2 + offsetX * (w / 300);
+  const dy = (h - fh) / 2 + offsetY * (h / 400);
+
+  if (flipped) {
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, w - dx - fw, dy, fw, fh);
+  } else {
+    ctx.drawImage(img, dx, dy, fw, fh);
+  }
+
+  ctx.restore();
+
+  // Subtle border
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+}
+
+function renderPreview() {
+  const ctx = previewCvs.getContext('2d');
+  drawPhoto(ctx, PREVIEW_W, PREVIEW_H);
+}
+
+// ── Sheet layouts ──
+function getLayout(qty) {
+  // returns {cols, rows, gapX, gapY, padX, padY} in cm
+  const layouts = {
+    4:  { cols: 2, rows: 2, gapX: 0.3, gapY: 0.3, padX: 1.5, padY: 2.5 },
+    6:  { cols: 2, rows: 3, gapX: 0.3, gapY: 0.3, padX: 1.5, padY: 1.2 },
+    8:  { cols: 4, rows: 2, gapX: 0.2, gapY: 0.3, padX: 0.5, padY: 2.5 },
+    12: { cols: 4, rows: 3, gapX: 0.2, gapY: 0.2, padX: 0.5, padY: 1.0 },
+  };
+  return layouts[qty] || layouts[8];
+}
+
+function renderSheet() {
+  const layout = getLayout(qty);
+  const c2p = PX_PER_CM_96 * 1.2; // 1.2 = display scale for A4
+
+  const canvasW = Math.round(A4_W_DISPLAY);
+  const canvasH = Math.round(A4_H_DISPLAY);
+  sheetCvs.width  = canvasW;
+  sheetCvs.height = canvasH;
+
+  const ctx = sheetCvs.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  const pW = PHOTO_W_CM * c2p;
+  const pH = PHOTO_H_CM * c2p;
+  const gX = layout.gapX * c2p;
+  const gY = layout.gapY * c2p;
+  const padX = layout.padX * c2p;
+  const padY = layout.padY * c2p;
+
+  // Draw cut lines (light)
+  ctx.strokeStyle = '#cccccc';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 0.8;
+
+  for (let r = 0; r < layout.rows; r++) {
+    for (let c = 0; c < layout.cols; c++) {
+      const x = padX + c * (pW + gX);
+      const y = padY + r * (pH + gY);
+
+      // Offscreen canvas per photo
+      const tmp = document.createElement('canvas');
+      tmp.width  = Math.round(pW);
+      tmp.height = Math.round(pH);
+      drawPhoto(tmp.getContext('2d'), Math.round(pW), Math.round(pH));
+      ctx.drawImage(tmp, Math.round(x), Math.round(y));
+
+      // Cut guideline border
+      ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(pW) - 1, Math.round(pH) - 1);
+    }
+  }
+  ctx.setLineDash([]);
+}
+
+function renderAll() {
+  renderPreview();
+  if (img) renderSheet();
+}
+
+// ── Print ──
+printBtn.addEventListener('click', () => {
+  // Build high-res sheet on hidden canvas, then print
+  const layout = getLayout(qty);
+  const DPI = 300;
+  const c2p = (DPI / 2.54); // px per cm at 300dpi
+
+  const pW  = Math.round(PHOTO_W_CM  * c2p);
+  const pH  = Math.round(PHOTO_H_CM  * c2p);
+  const a4W = Math.round(21 * c2p);
+  const a4H = Math.round(29.7 * c2p);
+  const gX  = Math.round(layout.gapX * c2p);
+  const gY  = Math.round(layout.gapY * c2p);
+  const padX = Math.round(layout.padX * c2p);
+  const padY = Math.round(layout.padY * c2p);
+
+  const pCvs = document.getElementById('print-canvas');
+  pCvs.width = a4W; pCvs.height = a4H;
+  const ctx = pCvs.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, a4W, a4H);
+
+  for (let r = 0; r < layout.rows; r++) {
+    for (let c = 0; c < layout.cols; c++) {
+      const x = padX + c * (pW + gX);
+      const y = padY + r * (pH + gY);
+      const tmp = document.createElement('canvas');
+      tmp.width = pW; tmp.height = pH;
+      drawPhoto(tmp.getContext('2d'), pW, pH);
+      ctx.drawImage(tmp, x, y);
+    }
+  }
+
+  // Print
+  const printArea = document.getElementById('print-area');
+  printArea.style.display = 'flex';
+  window.print();
+  printArea.style.display = 'none';
+});
+
+// ── Download ──
+downloadBtn.addEventListener('click', () => {
+  const layout = getLayout(qty);
+  const DPI = 300;
+  const c2p = DPI / 2.54;
+
+  const pW  = Math.round(PHOTO_W_CM  * c2p);
+  const pH  = Math.round(PHOTO_H_CM  * c2p);
+  const a4W = Math.round(21 * c2p);
+  const a4H = Math.round(29.7 * c2p);
+  const gX  = Math.round(layout.gapX * c2p);
+  const gY  = Math.round(layout.gapY * c2p);
+  const padX = Math.round(layout.padX * c2p);
+  const padY = Math.round(layout.padY * c2p);
+
+  const dl = document.createElement('canvas');
+  dl.width = a4W; dl.height = a4H;
+  const ctx = dl.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, a4W, a4H);
+
+  for (let r = 0; r < layout.rows; r++) {
+    for (let c = 0; c < layout.cols; c++) {
+      const x = padX + c * (pW + gX);
+      const y = padY + r * (pH + gY);
+      const tmp = document.createElement('canvas');
+      tmp.width = pW; tmp.height = pH;
+      drawPhoto(tmp.getContext('2d'), pW, pH);
+      ctx.drawImage(tmp, x, y);
+    }
+  }
+
+  const a = document.createElement('a');
+  a.download = `fotos-3x4-${qty}un.png`;
+  a.href = dl.toDataURL('image/png');
+  a.click();
+});
+
+// ── Initial placeholder ──
+(function drawPlaceholder() {
+  const ctx = previewCvs.getContext('2d');
+  ctx.fillStyle = '#f0ece3';
+  ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
+  ctx.strokeStyle = '#ccc5b5';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  ctx.strokeRect(12, 12, PREVIEW_W - 24, PREVIEW_H - 24);
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#a09880';
+  ctx.font = '500 15px DM Sans, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Nenhuma foto carregada', PREVIEW_W / 2, PREVIEW_H / 2 - 10);
+  ctx.font = '13px DM Sans, sans-serif';
+  ctx.fillStyle = '#bbb5a5';
+  ctx.fillText('Faça upload ao lado ←', PREVIEW_W / 2, PREVIEW_H / 2 + 14);
+})();
+</script>
+</body>
+</html>
