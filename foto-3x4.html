@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Fotos — 3×4 e 10×15</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #181818;
+  --paper: #f4efe5;
+  --cream: #ece7db;
+  --accent: #b83a24;
+  --accent-lite: rgba(184,58,36,0.08);
+  --muted: #8a8070;
+  --border: #ccc4b2;
+  --shadow: 0 3px 20px rgba(0,0,0,0.11);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; overflow: hidden; }
+
+header {
+  background: var(--ink); color: var(--paper);
+  height: 58px; padding: 0 28px;
+  display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+}
+header h1 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; letter-spacing: -0.01em; }
+header .tagline { font-size: 0.73rem; font-weight: 300; color: #7a7060; letter-spacing: 0.09em; text-transform: uppercase; }
+header .pills { margin-left: auto; display: flex; gap: 5px; }
+.fmt-pill {
+  font-size: 0.69rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 20px; border: 1.5px solid #3a3a3a; color: #9a9080;
+  cursor: pointer; transition: all 0.15s;
+}
+.fmt-pill.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+.app { display: flex; height: calc(100vh - 58px); }
+
+/* Sidebar */
+.sidebar {
+  width: 310px; flex-shrink: 0;
+  background: var(--cream); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto;
+}
+.sidebar-inner { padding: 18px 16px; display: flex; flex-direction: column; gap: 18px; }
+
+.sec-label {
+  font-size: 0.63rem; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Upload */
+.upload-zone {
+  border: 2px dashed var(--border); border-radius: 8px;
+  padding: 20px 14px; text-align: center; cursor: pointer;
+  background: rgba(255,255,255,0.4); position: relative; transition: all 0.18s;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: var(--accent-lite); }
+.upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.upload-zone .ico { font-size: 1.9rem; display:block; margin-bottom:5px; }
+.upload-zone p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+.upload-zone strong { color: var(--accent); }
+
+.thumb-strip { display:flex; align-items:center; gap:10px; }
+.thumb-strip img { width:48px; height:64px; object-fit:cover; border-radius:4px; border:2px solid var(--border); }
+.change-btn {
+  font-size:0.74rem; font-weight:500; padding:5px 10px; border-radius:5px;
+  border:1.5px solid var(--border); background:transparent; cursor:pointer; transition:all 0.15s;
+}
+.change-btn:hover { border-color:var(--ink); }
+
+/* Sliders */
+.sl { display:flex; flex-direction:column; gap:4px; }
+.sl-head { display:flex; justify-content:space-between; font-size:0.76rem; }
+.sl-head span { color:var(--muted); }
+input[type=range] { -webkit-appearance:none; width:100%; height:3px; background:var(--border); border-radius:2px; outline:none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; background:var(--ink); border-radius:50%; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.25); }
+
+/* Bg swatches */
+.bg-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.swatch { width:24px; height:24px; border-radius:50%; cursor:pointer; border:3px solid transparent; transition:all 0.13s; flex-shrink:0; }
+.swatch.active { border-color:var(--ink); transform:scale(1.12); }
+input[type=color].swatch { padding:0; overflow:hidden; }
+
+/* Sheet cards */
+.sheet-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.sheet-card {
+  background:white; border:2px solid var(--border); border-radius:7px;
+  padding:9px 7px; cursor:pointer; text-align:center; transition:all 0.15s;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.sheet-card:hover { border-color:var(--ink); }
+.sheet-card.active { border-color:var(--accent); background:var(--accent-lite); }
+.sheet-icon .rect { background:#dedad2; border:1.5px solid #aaa8a0; }
+.sheet-card .ctitle { font-size:0.71rem; font-weight:600; }
+.sheet-card .csize  { font-size:0.62rem; color:var(--muted); }
+
+/* Qty cards */
+.card-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.card {
+  background:white; border:2px solid var(--border); border-radius:7px;
+  padding:9px 7px; cursor:pointer; text-align:center; transition:all 0.15s;
+}
+.card:hover { border-color:var(--ink); }
+.card.active { border-color:var(--accent); background:var(--accent-lite); }
+.card .cqty { font-size:1.2rem; font-weight:700; font-family:'DM Serif Display',serif; line-height:1; }
+.card .cdesc { font-size:0.66rem; color:var(--muted); margin-top:2px; }
+
+/* Buttons */
+.btn-row { display:flex; gap:7px; }
+.btn { flex:1; padding:7px 10px; border-radius:6px; font-family:'DM Sans',sans-serif; font-size:0.76rem; font-weight:500; cursor:pointer; border:1.5px solid var(--border); background:transparent; color:var(--ink); transition:all 0.15s; }
+.btn:hover { border-color:var(--ink); }
+.btn-accent { background:var(--accent); color:white; border-color:var(--accent); width:100%; padding:10px; font-size:0.84rem; cursor:pointer; border-radius:6px; font-family:'DM Sans',sans-serif; font-weight:500; transition:all 0.15s; }
+.btn-accent:hover { background:#9a2e1c; }
+.btn-accent:disabled { background:var(--border); border-color:var(--border); color:var(--muted); cursor:not-allowed; }
+.btn-dl { width:100%; padding:8px; font-size:0.78rem; background:transparent; color:var(--ink); border:1.5px solid var(--border); border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:500; transition:all 0.15s; }
+.btn-dl:hover:not(:disabled) { border-color:var(--ink); }
+.btn-dl:disabled { color:var(--muted); cursor:not-allowed; }
+
+.tip { font-size:0.72rem; color:var(--muted); line-height:1.55; background:rgba(255,255,255,0.5); border-left:3px solid var(--accent); padding:7px 10px; border-radius:0 6px 6px 0; }
+
+/* Canvas area */
+.canvas-area {
+  flex:1; overflow-y:auto;
+  background:#d8d3c8;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 23px,rgba(0,0,0,0.025) 23px,rgba(0,0,0,0.025) 24px),
+    repeating-linear-gradient(90deg,transparent,transparent 23px,rgba(0,0,0,0.025) 23px,rgba(0,0,0,0.025) 24px);
+  display:flex; flex-direction:column; align-items:center;
+  gap:22px; padding:26px 20px;
+}
+.canvas-label { font-size:0.67rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:#807a70; }
+.preview-col { display:flex; flex-direction:column; align-items:center; gap:5px; }
+.canvas-row { display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center; width:100%; }
+canvas { display:block; }
+#preview-canvas { box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,0.07); }
+#sheet-canvas   { box-shadow: var(--shadow), 0 0 0 1px rgba(0,0,0,0.07); }
+
+@media print {
+  body * { visibility:hidden !important; }
+  #print-area, #print-area * { visibility:visible !important; }
+  #print-area { position:fixed; top:0; left:0; width:100%; height:100%; display:flex !important; align-items:center; justify-content:center; background:white; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Foto Print</h1>
+  <span class="tagline">Gerador para impressão</span>
+  <div class="pills">
+    <div class="fmt-pill active" data-size="3x4">3×4</div>
+    <div class="fmt-pill" data-size="10x15">10×15</div>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- 1. Foto -->
+      <div>
+        <div class="sec-label">1. Foto</div>
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" accept="image/*">
+          <span class="ico">📷</span>
+          <p><strong>Clique ou arraste</strong> a foto aqui<br>JPG, PNG, WEBP</p>
+        </div>
+        <div class="thumb-strip" id="thumb-strip" style="display:none; margin-top:10px;">
+          <img id="thumb-img" src="" alt="">
+          <div>
+            <div style="font-size:0.79rem;font-weight:500;margin-bottom:4px;">Foto carregada</div>
+            <button class="change-btn" id="change-btn">Trocar foto</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Ajustes -->
+      <div id="adj-section" style="display:none">
+        <div class="sec-label">2. Ajustes</div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div class="sl">
+            <div class="sl-head"><span>Zoom</span><strong><span id="v-zoom">100</span>%</strong></div>
+            <input type="range" id="s-zoom" min="50" max="320" value="100">
+          </div>
+          <div class="sl">
+            <div class="sl-head"><span>Horizontal</span><strong><span id="v-ox">0</span></strong></div>
+            <input type="range" id="s-ox" min="-300" max="300" value="0">
+          </div>
+          <div class="sl">
+            <div class="sl-head"><span>Vertical</span><strong><span id="v-oy">0</span></strong></div>
+            <input type="range" id="s-oy" min="-300" max="300" value="0">
+          </div>
+          <div class="sl">
+            <div class="sl-head"><span>Brilho</span><strong><span id="v-br">100</span>%</strong></div>
+            <input type="range" id="s-br" min="40" max="200" value="100">
+          </div>
+          <div class="sl">
+            <div class="sl-head"><span>Contraste</span><strong><span id="v-ct">100</span>%</strong></div>
+            <input type="range" id="s-ct" min="40" max="200" value="100">
+          </div>
+        </div>
+        <div style="margin-top:11px;">
+          <div class="sec-label" style="margin-bottom:7px;">Fundo</div>
+          <div class="bg-row">
+            <div class="swatch active" data-c="#ffffff" style="background:#fff;box-shadow:inset 0 0 0 1px #ccc" title="Branco"></div>
+            <div class="swatch" data-c="#e8e8e8" style="background:#e8e8e8;box-shadow:inset 0 0 0 1px #ccc" title="Cinza"></div>
+            <div class="swatch" data-c="#cdddf5" style="background:#cdddf5" title="Azul"></div>
+            <div class="swatch" data-c="#cce8cc" style="background:#cce8cc" title="Verde"></div>
+            <div class="swatch" data-c="#f5d5cc" style="background:#f5d5cc" title="Rosa"></div>
+            <div class="swatch" data-c="#1a1a1a" style="background:#1a1a1a" title="Preto"></div>
+            <input type="color" class="swatch" id="custom-bg" value="#ffffff" title="Personalizado">
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:11px;">
+          <button class="btn" id="reset-btn">↺ Resetar</button>
+          <button class="btn" id="flip-btn">⇄ Espelhar</button>
+          <button class="btn" id="rotate-btn">↻ Girar 90°</button>
+        </div>
+      </div>
+
+      <!-- 3. Folha -->
+      <div>
+        <div class="sec-label">3. Folha</div>
+        <div class="sheet-grid" id="sheet-grid"></div>
+      </div>
+
+      <!-- 4. Quantidade -->
+      <div id="qty-section" style="display:none">
+        <div class="sec-label">4. Quantidade</div>
+        <div class="card-grid" id="qty-grid"></div>
+      </div>
+
+      <!-- Ações -->
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <button class="btn-accent" id="print-btn" disabled>🖨️ Imprimir</button>
+        <button class="btn-dl" id="dl-btn" disabled>⬇ Baixar PNG (alta resolução)</button>
+      </div>
+
+      <div class="tip" id="tip-text">Carregue uma foto para começar.</div>
+    </div>
+  </aside>
+
+  <main class="canvas-area">
+    <div class="canvas-row">
+      <div class="preview-col">
+        <div class="canvas-label" id="prev-label">Pré-visualização</div>
+        <canvas id="preview-canvas"></canvas>
+      </div>
+      <div class="preview-col" id="sheet-col" style="display:none">
+        <div class="canvas-label" id="sheet-label">Folha para impressão</div>
+        <canvas id="sheet-canvas"></canvas>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="print-area" style="display:none">
+  <canvas id="print-canvas"></canvas>
+</div>
+
+<script>
+const CM = 37.7952756;
+
+const PHOTO_SIZES = { '3x4': [3, 4], '10x15': [10, 15] };
+
+const SHEETS = [
+  { id:'a4p',  w:21,   h:29.7,  label:'A4 Retrato',    size:'21 × 29,7 cm' },
+  { id:'a4l',  w:29.7, h:21,    label:'A4 Paisagem',   size:'29,7 × 21 cm' },
+  { id:'ha4p', w:10.5, h:29.7,  label:'½ A4 Retrato',  size:'10,5 × 29,7 cm' },
+  { id:'ha4l', w:21,   h:14.85, label:'½ A4 Paisagem', size:'21 × 14,85 cm' },
+];
+
+// Layouts keyed by "photoSize_sheetId"
+// Each entry is array of layout options
+const LAYOUTS = {
+  '3x4_a4p': [
+    { cols:4, rows:2, label:'8 fotos',  gapX:0.25, gapY:0.30 },
+    { cols:4, rows:3, label:'12 fotos', gapX:0.25, gapY:0.25 },
+    { cols:2, rows:4, label:'8 fotos (2 col)', gapX:0.5, gapY:0.25 },
+    { cols:2, rows:2, label:'4 fotos',  gapX:0.5,  gapY:0.5  },
+  ],
+  '3x4_a4l': [
+    { cols:5, rows:2, label:'10 fotos', gapX:0.25, gapY:0.4 },
+    { cols:4, rows:2, label:'8 fotos',  gapX:0.4,  gapY:0.4 },
+    { cols:3, rows:2, label:'6 fotos',  gapX:0.5,  gapY:0.4 },
+    { cols:6, rows:2, label:'12 fotos', gapX:0.2,  gapY:0.4 },
+  ],
+  '3x4_ha4p': [
+    { cols:3, rows:3, label:'9 fotos',  gapX:0.15, gapY:0.25 },
+    { cols:2, rows:3, label:'6 fotos',  gapX:0.3,  gapY:0.25 },
+    { cols:3, rows:2, label:'6 fotos (2 lin)', gapX:0.15, gapY:0.4 },
+  ],
+  '3x4_ha4l': [
+    { cols:4, rows:2, label:'8 fotos',  gapX:0.25, gapY:0.15 },
+    { cols:3, rows:2, label:'6 fotos',  gapX:0.35, gapY:0.15 },
+    { cols:4, rows:1, label:'4 fotos',  gapX:0.25, gapY:0    },
+  ],
+  '10x15_a4p': [
+    { cols:2, rows:1, label:'2 fotos',  gapX:0.5,  gapY:0 },
+    { cols:1, rows:1, label:'1 foto',   gapX:0,    gapY:0 },
+    { cols:2, rows:2, label:'4 fotos',  gapX:0.5,  gapY:0.3 },
+  ],
+  '10x15_a4l': [
+    { cols:2, rows:1, label:'2 fotos',  gapX:0.4,  gapY:0 },
+    { cols:1, rows:1, label:'1 foto',   gapX:0,    gapY:0 },
+  ],
+  '10x15_ha4p': [
+    { cols:1, rows:1, label:'1 foto',   gapX:0, gapY:0 },
+  ],
+  '10x15_ha4l': [
+    { cols:1, rows:1, label:'1 foto',   gapX:0, gapY:0, rotatePhoto:true },
+  ],
+};
+
+// State
+let img = null, photoSize = '3x4', sheetId = 'a4p', layoutIdx = 0;
+let zoom = 100, ox = 0, oy = 0, br = 100, ct = 100;
+let bgColor = '#ffffff', flipped = false, rotDeg = 0;
+
+// DOM
+const fileInput   = document.getElementById('file-input');
+const uploadZone  = document.getElementById('upload-zone');
+const thumbStrip  = document.getElementById('thumb-strip');
+const thumbImg    = document.getElementById('thumb-img');
+const adjSection  = document.getElementById('adj-section');
+const prevCanvas  = document.getElementById('preview-canvas');
+const sheetCanvas = document.getElementById('sheet-canvas');
+const sheetCol    = document.getElementById('sheet-col');
+const prevLabel   = document.getElementById('prev-label');
+const sheetLabel  = document.getElementById('sheet-label');
+const printBtn    = document.getElementById('print-btn');
+const dlBtn       = document.getElementById('dl-btn');
+const tipText     = document.getElementById('tip-text');
+
+const TIPS = {
+  '3x4':   'Tamanho <strong>3×4 cm</strong>. Use fundo branco ou cinza para documentos.',
+  '10x15': 'Tamanho <strong>10×15 cm</strong> — padrão de revelação fotográfica.',
+};
+
+/* ── Sheet icons SVG ── */
+function sheetIconHTML(w, h) {
+  const scale = 32 / Math.max(w, h);
+  const iw = Math.round(w * scale);
+  const ih = Math.round(h * scale);
+  return `<div class="rect" style="width:${iw}px;height:${ih}px;border-radius:2px;"></div>`;
+}
+
+/* ── Build sheet grid ── */
+function buildSheetGrid() {
+  const grid = document.getElementById('sheet-grid');
+  grid.innerHTML = '';
+  SHEETS.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'sheet-card' + (s.id === sheetId ? ' active' : '');
+    card.innerHTML = `<div class="sheet-icon">${sheetIconHTML(s.w, s.h)}</div><div class="ctitle">${s.label}</div><div class="csize">${s.size}</div>`;
+    card.addEventListener('click', () => { sheetId = s.id; layoutIdx = 0; buildSheetGrid(); buildQtyGrid(); renderAll(); });
+    grid.appendChild(card);
+  });
+}
+
+/* ── Build qty grid ── */
+function buildQtyGrid() {
+  const key = photoSize + '_' + sheetId;
+  const layouts = LAYOUTS[key] || [];
+  const section = document.getElementById('qty-section');
+  const grid    = document.getElementById('qty-grid');
+  grid.innerHTML = '';
+  if (layouts.length <= 1) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  layouts.forEach((l, i) => {
+    const card = document.createElement('div');
+    card.className = 'card' + (i === layoutIdx ? ' active' : '');
+    card.innerHTML = `<div class="cqty">${l.cols * l.rows}</div><div class="cdesc">${l.label}</div>`;
+    card.addEventListener('click', () => { layoutIdx = i; buildQtyGrid(); renderAll(); });
+    grid.appendChild(card);
+  });
+}
+
+function currentLayout() {
+  const key = photoSize + '_' + sheetId;
+  return (LAYOUTS[key] || [{}])[layoutIdx] || {};
+}
+function currentSheet() { return SHEETS.find(s => s.id === sheetId); }
+function currentPhotoWH() {
+  const [pw, ph] = PHOTO_SIZES[photoSize];
+  const l = currentLayout();
+  return l.rotatePhoto ? [ph, pw] : [pw, ph];
+}
+
+/* ── Format pills ── */
+document.querySelectorAll('.fmt-pill').forEach(p => {
+  p.addEventListener('click', () => {
+    photoSize = p.dataset.size;
+    document.querySelectorAll('.fmt-pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    layoutIdx = 0;
+    buildSheetGrid(); buildQtyGrid();
+    tipText.innerHTML = img ? TIPS[photoSize] : 'Carregue uma foto para começar.';
+    renderAll();
+  });
+});
+
+/* ── File upload ── */
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag'); loadFile(e.dataTransfer.files[0]); });
+document.getElementById('change-btn').addEventListener('click', () => fileInput.click());
+
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const i = new Image();
+    i.onload = () => {
+      img = i;
+      zoom = 100; ox = 0; oy = 0; br = 100; ct = 100; flipped = false; rotDeg = 0;
+      syncSliders();
+      thumbImg.src = ev.target.result;
+      uploadZone.style.display = 'none';
+      thumbStrip.style.display = 'flex';
+      adjSection.style.display = '';
+      sheetCol.style.display = '';
+      printBtn.disabled = false;
+      dlBtn.disabled = false;
+      tipText.innerHTML = TIPS[photoSize];
+      renderAll();
+    };
+    i.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── Sliders ── */
+function syncSliders() {
+  [['s-zoom','v-zoom',zoom],['s-ox','v-ox',ox],['s-oy','v-oy',oy],['s-br','v-br',br],['s-ct','v-ct',ct]].forEach(([s,v,val]) => {
+    document.getElementById(s).value = val;
+    document.getElementById(v).textContent = val;
+  });
+}
+[['s-zoom','v-zoom', v=>zoom=v],['s-ox','v-ox',v=>ox=v],['s-oy','v-oy',v=>oy=v],['s-br','v-br',v=>br=v],['s-ct','v-ct',v=>ct=v]].forEach(([sid,vid,fn]) => {
+  document.getElementById(sid).addEventListener('input', function() {
+    fn(parseInt(this.value));
+    document.getElementById(vid).textContent = this.value;
+    renderAll();
+  });
+});
+
+/* ── Background ── */
+document.querySelectorAll('.swatch[data-c]').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active'); bgColor = sw.dataset.c; renderAll();
+  });
+});
+document.getElementById('custom-bg').addEventListener('input', function() {
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  this.classList.add('active'); bgColor = this.value; renderAll();
+});
+
+/* ── Controls ── */
+document.getElementById('reset-btn').addEventListener('click', () => { zoom=100;ox=0;oy=0;br=100;ct=100;flipped=false;rotDeg=0; syncSliders(); renderAll(); });
+document.getElementById('flip-btn').addEventListener('click', () => { flipped=!flipped; renderAll(); });
+document.getElementById('rotate-btn').addEventListener('click', () => { rotDeg=(rotDeg+90)%360; renderAll(); });
+
+/* ── Draw single photo on canvas ── */
+function drawPhoto(ctx, dw, dh) {
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, dw, dh);
+  if (!img) return;
+
+  ctx.save();
+  ctx.filter = `brightness(${br}%) contrast(${ct}%)`;
+
+  const fitScale = Math.max(dw / img.naturalWidth, dh / img.naturalHeight);
+  const fw = img.naturalWidth  * fitScale * (zoom / 100);
+  const fh = img.naturalHeight * fitScale * (zoom / 100);
+  const dx = (dw - fw) / 2 + ox * (dw / 300);
+  const dy = (dh - fh) / 2 + oy * (dh / 400);
+
+  ctx.translate(dw / 2, dh / 2);
+  if (rotDeg) ctx.rotate(rotDeg * Math.PI / 180);
+  if (flipped) ctx.scale(-1, 1);
+  ctx.drawImage(img, dx - dw/2, dy - dh/2, fw, fh);
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, dw-1, dh-1);
+}
+
+/* ── Compute layout positions ── */
+function computeGeometry(c2p) {
+  const sheet   = currentSheet();
+  const layout  = currentLayout();
+  const [pwCm, phCm] = currentPhotoWH();
+  const sheetW  = sheet.w * c2p;
+  const sheetH  = sheet.h * c2p;
+  const pW      = pwCm * c2p;
+  const pH      = phCm * c2p;
+  const gX      = (layout.gapX || 0) * c2p;
+  const gY      = (layout.gapY || 0) * c2p;
+  const totalW  = layout.cols * pW + (layout.cols - 1) * gX;
+  const totalH  = layout.rows * pH + (layout.rows - 1) * gY;
+  const padX    = (sheetW - totalW) / 2;
+  const padY    = (sheetH - totalH) / 2;
+  const positions = [];
+  for (let r = 0; r < layout.rows; r++)
+    for (let c = 0; c < layout.cols; c++)
+      positions.push({ x: padX + c*(pW+gX), y: padY + r*(pH+gY) });
+  return { sheetW, sheetH, pW: Math.round(pW), pH: Math.round(pH), positions };
+}
+
+/* ── Render preview ── */
+function renderPreview() {
+  const [pwCm, phCm] = currentPhotoWH();
+  const maxDim = 320;
+  const scale  = maxDim / Math.max(pwCm * CM, phCm * CM);
+  const dW = Math.round(pwCm * CM * scale);
+  const dH = Math.round(phCm * CM * scale);
+  prevCanvas.width = dW; prevCanvas.height = dH;
+  const ctx = prevCanvas.getContext('2d');
+  if (!img) {
+    ctx.fillStyle = '#ede8dc'; ctx.fillRect(0,0,dW,dH);
+    ctx.strokeStyle='#ccc4b2'; ctx.setLineDash([7,5]); ctx.lineWidth=2;
+    ctx.strokeRect(10,10,dW-20,dH-20); ctx.setLineDash([]);
+    ctx.fillStyle='#a09880'; ctx.font='500 13px DM Sans,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Nenhuma foto', dW/2, dH/2-8);
+    ctx.fillStyle='#bbb5a5'; ctx.font='12px DM Sans,sans-serif';
+    ctx.fillText('Faça upload ←', dW/2, dH/2+10);
+  } else { drawPhoto(ctx, dW, dH); }
+  const [pw, ph] = PHOTO_SIZES[photoSize];
+  prevLabel.textContent = `Prévia — ${pw}×${ph} cm`;
+}
+
+/* ── Render sheet ── */
+function renderSheet() {
+  const sheet = currentSheet();
+  const maxW  = Math.min(580, window.innerWidth - 400);
+  const c2p   = maxW / sheet.w;
+  const { sheetW, sheetH, pW, pH, positions } = computeGeometry(c2p);
+  sheetCanvas.width  = Math.round(sheetW);
+  sheetCanvas.height = Math.round(sheetH);
+  const ctx = sheetCanvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, sheetW, sheetH);
+  ctx.strokeStyle = '#bbb5a5'; ctx.setLineDash([5,5]); ctx.lineWidth = 0.7;
+  positions.forEach(({x,y}) => {
+    const tmp = document.createElement('canvas');
+    tmp.width = pW; tmp.height = pH;
+    drawPhoto(tmp.getContext('2d'), pW, pH);
+    ctx.drawImage(tmp, Math.round(x), Math.round(y));
+    ctx.strokeRect(Math.round(x)+0.5, Math.round(y)+0.5, pW-1, pH-1);
+  });
+  ctx.setLineDash([]);
+  const layout = currentLayout();
+  sheetLabel.textContent = `${sheet.label} — ${layout.label || (layout.cols*layout.rows)+' fotos'}`;
+}
+
+/* ── Build hi-res sheet (300 dpi) ── */
+function buildHiRes() {
+  const c2p = 300 / 2.54;
+  const { sheetW, sheetH, pW, pH, positions } = computeGeometry(c2p);
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(sheetW); cv.height = Math.round(sheetH);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  positions.forEach(({x,y}) => {
+    const tmp = document.createElement('canvas');
+    tmp.width = pW; tmp.height = pH;
+    drawPhoto(tmp.getContext('2d'), pW, pH);
+    ctx.drawImage(tmp, Math.round(x), Math.round(y));
+  });
+  return cv;
+}
+
+/* ── Print ── */
+printBtn.addEventListener('click', () => {
+  const cv = buildHiRes();
+  const pc = document.getElementById('print-canvas');
+  pc.width = cv.width; pc.height = cv.height;
+  pc.getContext('2d').drawImage(cv, 0, 0);
+  document.getElementById('print-area').style.display = 'flex';
+  window.print();
+  document.getElementById('print-area').style.display = 'none';
+});
+
+/* ── Download ── */
+dlBtn.addEventListener('click', () => {
+  const cv  = buildHiRes();
+  const layout = currentLayout();
+  const sheet  = currentSheet();
+  const a = document.createElement('a');
+  a.download = `fotos-${photoSize}-${layout.cols*layout.rows}un-${sheet.id}.png`;
+  a.href = cv.toDataURL('image/png');
+  a.click();
+});
+
+function renderAll() { renderPreview(); if (img) renderSheet(); }
+
+// Init
+buildSheetGrid();
+buildQtyGrid();
+renderPreview();
+</script>
+</body>
+</html>
